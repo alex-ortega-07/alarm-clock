@@ -1,8 +1,7 @@
 /*
     Alarm Clock v2.0
 
-    Updated the version from my old alarm clock code.
-    An alarm clock where you can set 2 different alarms and you are able to see the hour, date, and temperature.
+    Basic alarm clock code.
 
     The circuit:
     * Arduino Nano
@@ -13,6 +12,8 @@
     * 9V battery connector at its VIN pin
 
     Created 20/8/2023
+    By Alejandro Ortega Cadahía
+    Modified 3/9/2023
     By Alejandro Ortega Cadahía
 
     Author's GitHub: https://github.com/alex-ortega-07
@@ -37,6 +38,8 @@ const int BT_MID = 5;
 const int BT_DOWN = 6;
 const int BTS [] {BT_UP, BT_MID, BT_DOWN};
 const int BUZZER = 2;
+
+const String weekDays [] {"Sun.", "Mon.", "Tues.", "Weds.", "Thurs.", "Fri.", "Sat."};
 
 int btPressed = -1;
 
@@ -88,7 +91,7 @@ void setup() {
   display.clearDisplay();
 
   rtc.begin();
-  rtc.adjust(DateTime(__DATE__,__TIME__));
+  rtc.adjust(DateTime(2023, 0, 0, 0, 0, 0));
 
   String alarmParameters[] {"00", "00", "Off"};
   for(int i = 0; i < numberAlarms; ++i){
@@ -407,23 +410,30 @@ int pressedBTS(){
   return -1;
 }
 
-void showStatusBar(DateTime &date){
+void showStatusBar(DateTime &date, int screen){
   display.setTextColor(SSD1306_WHITE);
   display.setFont();
   display.setCursor(0, 0);
   display.setTextSize(1);
-  display.print(date.day());
-  display.print("/");
-  display.print(date.month());
-  display.print("/");
-  display.print(date.year());
+
+  if(screen > 0){
+    display.print(weekDays[date.dayOfTheWeek()]);
+  }
+
+  else{
+    display.print(date.day());
+    display.print("/");
+    display.print(date.month());
+    display.print("/");
+    display.print(date.year());
+  }
 
   if(getNumAlarmsActive() > 0)
     showAlarmIcon(110, 7);
 }
 
 void showPrincipalMenu(DateTime &date, int screen){
-  showStatusBar(date);
+  showStatusBar(date, screen);
 
   display.setTextColor(SSD1306_WHITE);
   display.setFont(&FreeMono9pt7b);
