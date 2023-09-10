@@ -15,6 +15,8 @@
     By Alejandro Ortega Cadahía
     Modified 3/9/2023
     By Alejandro Ortega Cadahía
+    Modified 10/9/2023
+    By Alejandro Ortega Cadahía
 
     Author's GitHub: https://github.com/alex-ortega-07
 
@@ -33,9 +35,9 @@ const int OLED_RESET = 4 ;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 RTC_DS3231 rtc;
 
-const int BT_UP = 4;
+const int BT_UP = 6;
 const int BT_MID = 5;
-const int BT_DOWN = 6;
+const int BT_DOWN = 4;
 const int BTS [] {BT_UP, BT_MID, BT_DOWN};
 const int BUZZER = 2;
 
@@ -62,6 +64,10 @@ int listAlarmMenuArrowMult = 0;
 int listAlarmMenuScroll = 0;
 bool alarmStatusFlag = false;
 bool activeAlarm = false;
+bool activeSoundAlarm = false;
+int alarmDelay = 3;
+long alarmDuration = 60000;
+unsigned long alarmElapsedTime = 0;
 int alarmCheck;
 int numAlarm;
 int alarmH;
@@ -69,6 +75,8 @@ int alarmM;
 
 unsigned long currentMillis;
 unsigned long previousMillis = 0;
+unsigned long currentAlarmMillis = millis() / 100;
+unsigned long previousAlarmMillis = 0;
 const long intervalDim = 30000;
 bool displayDim = false;
 
@@ -111,14 +119,12 @@ void loop() {
   btPressed = pressedBTS();
   alarmCheck = checkAlarms(date);
 
-  if(alarmCheck > -1 || activeAlarm){
-    alarmTriggered(date);
-
-    if(btPressed > -1)
-      activeAlarm = false;
+  if(alarmCheck > -1){
+    previousAlarmMillis = millis();
+    activeAlarm = true;
   }
 
-  else{
+  if(!activeAlarm){
     if(screenPage == 0){
       showPrincipalMenu(date, principalScreen);
       
@@ -386,14 +392,34 @@ void loop() {
     }
   }
 
+  if(activeAlarm){
+    alarmTriggered(date);
+
+    if((millis() / 100) % alarmDelay == 0 && millis() / 100 != currentAlarmMillis){
+      activeSoundAlarm = !activeSoundAlarm;
+      currentAlarmMillis = millis() / 100;
+    }
+
+    alarmElapsedTime = millis() - previousAlarmMillis;
+    if(alarmElapsedTime >= alarmDuration){
+      activeAlarm = activeSoundAlarm = false;
+      alarmCheck = -1;
+    }
+
+    if(btPressed > -1){
+      activeAlarm = activeSoundAlarm = false;
+      alarmCheck = -1;
+    }
+
+    digitalWrite(BUZZER, activeSoundAlarm);
+  }
+
   currentMillis = millis();
   if(currentMillis - previousMillis >= intervalDim)
     setDim(true);
 
   if(btPressed > -1)
     setDim(false);
-
-  digitalWrite(BUZZER, activeAlarm);
 
   display.dim(displayDim);
   display.display();
@@ -583,10 +609,8 @@ int checkAlarms(DateTime &date){
     if(alarms[i][2] == "On"){
       if(alarms[i][0].toInt() == date.hour() &&
          alarms[i][1].toInt() == date.minute() &&
-         date.second() == 0){
-        activeAlarm = true;
-        return i;
-      }
+         date.second() == 0)
+          return i;
     }
   }
 
